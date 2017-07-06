@@ -101,8 +101,8 @@ app
     };
   }
 ])
-.controller('UserAccountController', ['$scope', '$http', '$mdMedia', 'userApi', 'alertDialog', 'payDialog', '$interval', '$localStorage', 'changePasswordDialog',
-  ($scope, $http, $mdMedia, userApi, alertDialog, payDialog, $interval, $localStorage, changePasswordDialog) => {
+.controller('UserAccountController', ['$scope', '$http', '$mdMedia', 'userApi', 'alertDialog', 'payDialog', 'qrcodeDialog', '$interval', '$localStorage', 'changePasswordDialog',
+  ($scope, $http, $mdMedia, userApi, alertDialog, payDialog, qrcodeDialog, $interval, $localStorage, changePasswordDialog) => {
     $scope.setTitle('我的账号');
     $scope.flexGtSm = 100;
     if(!$localStorage.user.serverInfo) {
@@ -123,6 +123,19 @@ app
       $scope.flexGtSm = 50;
     }
 
+    $http.get('/api/user/multiServerFlow').then(success => {
+      $scope.isMultiServerFlow = success.data.status;
+    });
+    
+    const setAccountServerList = (account, server) => {
+      account.forEach(a => {
+        a.serverList = $scope.servers.filter(f => {
+          return !a.server || a.server.indexOf(f.id) >= 0;
+        });
+      });
+    };
+    setAccountServerList($scope.account, $scope.servers);
+
     const getUserAccountInfo = () => {
       userApi.getUserAccount().then(success => {
         $scope.servers = success.servers;
@@ -136,6 +149,7 @@ app
         } else {
           $scope.account = success.account;
         }
+        setAccountServerList($scope.account, $scope.servers);
         $localStorage.user.serverInfo.data = success.servers;
         $localStorage.user.serverInfo.time = Date.now();
         $localStorage.user.accountInfo.data = success.account;
@@ -152,15 +166,18 @@ app
         return String.fromCharCode('0x' + p1);
       }));
     };
-    $scope.createQrCode = (method, password, host, port) => {
+    $scope.createQrCode = (method, password, host, port, serverName) => {
       return 'ss://' + base64Encode(method + ':' + password + '@' + host + ':' + port);
     };
 
-    $scope.getServerPortData = (account, serverId, port) => {
+    $scope.getServerPortData = (account, serverId, scale, port) => {
       account.currentServerId = serverId;
+      if(!account.isFlowOutOfLimit) { account.isFlowOutOfLimit = {}; }
       userApi.getServerPortData(account, serverId, port).then(success => {
         account.lastConnect = success.lastConnect;
         account.serverPortFlow = success.flow;
+        const maxFlow = account.data.flow * ($scope.isMultiServerFlow ? 1 : scale);
+        account.isFlowOutOfLimit[serverId] = account.serverPortFlow >= maxFlow;
       });
     };
 
@@ -168,7 +185,7 @@ app
       if(status === 'visible') {
         if($localStorage.user.accountInfo && Date.now() - $localStorage.user.accountInfo.time >= 10 * 1000) {
           $scope.account.forEach(a => {
-            $scope.getServerPortData(a, a.currentServerId, a.port);
+            $scope.getServerPortData(a, a.currentServerId, scale, a.port);
           });
         }
       }
@@ -208,6 +225,17 @@ app
       return {
         color: '#a33',
       };
+    };
+    $scope.isAccountOutOfDate = account => {
+      if(account.type >=2 && account.type <= 5) {
+        return Date.now() >= account.data.expire;
+      } else {
+        return false;
+      }
+    };
+    $scope.showQrcodeDialog = (method, password, host, port, serverName) => {
+      const ssAddress = $scope.createQrCode(method, password, host, port, serverName);
+      qrcodeDialog.show(serverName, ssAddress);
     };
   }
 ]);

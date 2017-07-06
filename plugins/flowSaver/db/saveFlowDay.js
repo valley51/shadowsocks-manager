@@ -1,5 +1,5 @@
 const knex = appRequire('init/knex').knex;
-const tableName = 'saveFlow';
+const tableName = 'saveFlowDay';
 
 const config = appRequire('services/config').all();
 const createTable = async() => {
@@ -15,7 +15,7 @@ const createTable = async() => {
     table.integer('port');
     table.bigInteger('flow');
     table.bigInteger('time');
-    table.index(['time', 'port'], 'index');
+    table.index(['time', 'port'], 'dayIndex');
   });
 };
 

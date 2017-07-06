@@ -1,6 +1,6 @@
 // importScripts('/libs/serviceworker-cache-polyfill.js');
 
-var ONLINE_CACHE_NAME = '2017-04-08 10:08:27';
+var ONLINE_CACHE_NAME = '2017-07-02 23:53:28';
 var onlineCacheUrl = [
   '/',
 
@@ -45,6 +45,7 @@ var onlineCacheUrl = [
   '/public/views/user/changePassword.html',
   '/public/views/user/index.html',
   '/public/views/user/payDialog.html',
+  '/public/views/user/qrcodeDialog.html',
   '/public/views/user/user.html',
 
   '/public/views/admin/account.html',
@@ -52,10 +53,12 @@ var onlineCacheUrl = [
   '/public/views/admin/accountSortAndFilterDialog.html',
   '/public/views/admin/addAccount.html',
   '/public/views/admin/addServer.html',
+  '/public/views/admin/addUser.html',
   '/public/views/admin/admin.html',
   '/public/views/admin/editAccount.html',
   '/public/views/admin/editNotice.html',
   '/public/views/admin/editServer.html',
+  '/public/views/admin/emailDialog.html',
   '/public/views/admin/index.html',
   '/public/views/admin/newNotice.html',
   '/public/views/admin/notice.html',

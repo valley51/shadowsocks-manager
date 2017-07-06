@@ -1,6 +1,6 @@
 const app = angular.module('app');
 
-app.factory('adminApi', ['$http', '$q', 'moment', 'preload', ($http, $q, moment, preload) => {
+app.factory('adminApi', ['$http', '$q', 'moment', 'preload', '$timeout', ($http, $q, moment, preload, $timeout) => {
   const getUser = (opt = {}) => {
     const search = opt.search || '';
     const filter = opt.filter || 'all';
@@ -91,26 +91,15 @@ app.factory('adminApi', ['$http', '$q', 'moment', 'preload', ($http, $q, moment,
     indexInfoPromise = $q.all([
       $http.get('/api/admin/user/recentSignUp').then(success => success.data),
       $http.get('/api/admin/user/recentLogin').then(success => success.data),
+      $http.get('/api/admin/order/recentOrder').then(success => success.data),
     ]).then(success => {
       return {
         signup: success[0],
         login: success[1],
+        order: success[2],
       };
     });
     return indexInfoPromise;
-  };
-
-  const getServerPortData = (serverId, port) => {
-    const Promises = [
-      $http.get(`/api/admin/flow/${ serverId }/${ port }/lastConnect`),
-      $http.get(`/api/admin/flow/${ serverId }/${ port }`),
-    ];
-    return $q.all(Promises).then(success => {
-      return {
-        lastConnect: success[0].data.lastConnect,
-        flow: success[1].data[0],
-      };
-    });
   };
 
   const getUserData = (userId) => {
@@ -130,33 +119,33 @@ app.factory('adminApi', ['$http', '$q', 'moment', 'preload', ($http, $q, moment,
   const getChartData = (serverId, type, time, doNotPreload) => {
     let queryTime;
     if(type === 'hour') {
-      !doNotPreload && getChartData(serverId, type, time - 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 2 * 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 3 * 3600000, true);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 3600000, true); }, 500);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 2 * 3600000, true); }, 600);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 3 * 3600000, true); }, 700);
       queryTime = moment(time).minute(0).second(0).millisecond(0).toDate().getTime();
     }
     if(type === 'day') {
-      !doNotPreload && getChartData(serverId, type, time - 24 * 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 2 * 24 * 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 3 * 24 * 3600000, true);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 24 * 3600000, true); }, 500);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 2 * 24 * 3600000, true); }, 600);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 3 * 24 * 3600000, true); }, 700);
       queryTime = moment(time).hour(0).minute(0).second(0).millisecond(0).toDate().getTime();
     }
     if(type === 'week') {
-      !doNotPreload && getChartData(serverId, type, time - 7 * 24 * 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 2 * 7 * 24 * 3600000, true);
-      !doNotPreload && getChartData(serverId, type, time - 3 * 7 * 24 * 3600000, true);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 7 * 24 * 3600000, true); }, 500);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 2 * 7 * 24 * 3600000, true); }, 600);
+      !doNotPreload && $timeout(() => { getChartData(serverId, type, time - 3 * 7 * 24 * 3600000, true); }, 700);
       queryTime = moment(time).day(0).hour(0).minute(0).second(0).millisecond(0).toDate().getTime();
     }
     const id = `getChartData:${ serverId }:${ type }:${ queryTime }`;
     const promise = () => {
       return $q.all([
-        $http.get('/api/admin/flow/' + serverId, {
+        $http.get(`/api/admin/flow/${ serverId }`, {
           params: {
             type,
             time: queryTime,
           }
         }),
-        $http.get('/api/admin/flow/' + serverId + '/user', {
+        $http.get(`/api/admin/flow/${ serverId }/user`, {
           params: {
             type,
             time: queryTime,
@@ -209,6 +198,26 @@ app.factory('adminApi', ['$http', '$q', 'moment', 'preload', ($http, $q, moment,
     return preload.get(id, promise, 90 * 1000);
   };
 
+  const getServerPortData = (serverId, port) => {
+    const id = `getServerPortData:${ serverId }:${ port }:`;
+    const promise = () => {
+      return $q.all([
+        $http.get(`/api/admin/flow/${ serverId }/${ port }`),
+        $http.get(`/api/admin/flow/${ serverId }/${ port }/lastConnect`)
+      ]).then(success => {
+        return {
+          serverPortFlow: success[0].data[0],
+          lastConnect: success[1].data.lastConnect,
+        };
+      });
+    };
+    return preload.get(id, promise, 60 * 1000);
+  };
+
+  const getUserPortLastConnect = port => {
+    return $http.get(`/api/admin/user/${ port }/lastConnect`).then(success => success.data);
+  };
+
   return {
     getUser,
     getOrder,
@@ -222,5 +231,6 @@ app.factory('adminApi', ['$http', '$q', 'moment', 'preload', ($http, $q, moment,
     getUserData,
     getChartData,
     getAccountChartData,
+    getUserPortLastConnect,
   };
 }]);

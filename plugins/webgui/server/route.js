@@ -11,6 +11,7 @@ const adminNotice = appRequire('plugins/webgui/server/adminNotice');
 const push = appRequire('plugins/webgui/server/push');
 const path = require('path');
 const knex = appRequire('init/knex').knex;
+const config = appRequire('services/config').all();
 
 const isUser = (req, res, next) => {
   if(req.session.type === 'normal') {
@@ -61,12 +62,17 @@ app.get('/api/admin/flow/:serverId(\\d+)/:port(\\d+)', isAdmin, admin.getServerP
 app.get('/api/admin/flow/:serverId(\\d+)/:port(\\d+)/lastConnect', isAdmin, admin.getServerPortLastConnect);
 
 app.get('/api/admin/user', isAdmin, admin.getUsers);
+app.post('/api/admin/user/add', isAdmin, admin.addUser);
 app.get('/api/admin/user/recentSignUp', isAdmin, admin.getRecentSignUpUsers);
 app.get('/api/admin/user/recentLogin', isAdmin, admin.getRecentLoginUsers);
+app.get('/api/admin/order/recentOrder', isAdmin, admin.getRecentOrders);
 app.get('/api/admin/user/account', isAdmin, admin.getUserAccount);
 app.get('/api/admin/user/:userId(\\d+)', isAdmin, admin.getOneUser);
+app.post('/api/admin/user/:userId(\\d+)/sendEmail', isAdmin, admin.sendUserEmail);
 app.put('/api/admin/user/:userId(\\d+)/:accountId(\\d+)', isAdmin, admin.setUserAccount);
+app.delete('/api/admin/user/:userId(\\d+)', isAdmin, admin.deleteUser);
 app.delete('/api/admin/user/:userId(\\d+)/:accountId(\\d+)', isAdmin, admin.deleteUserAccount);
+app.get('/api/admin/user/:port(\\d+)/lastConnect', isAdmin, admin.getUserPortLastConnect);
 
 app.get('/api/admin/order', isAdmin, admin.getOrders);
 app.get('/api/admin/order/:userId(\\d+)', isAdmin, admin.getUserOrders);
@@ -87,6 +93,7 @@ app.get('/api/user/server', isUser, user.getServers);
 app.get('/api/user/flow/:serverId(\\d+)/:port(\\d+)', isUser, user.getServerPortFlow);
 app.get('/api/user/flow/:serverId(\\d+)/:port(\\d+)/lastConnect', isUser, user.getServerPortLastConnect);
 app.put('/api/user/:accountId(\\d+)/password', isUser, user.changePassword);
+app.get('/api/user/multiServerFlow', isUser, user.getMultiServerFlowStatus);
 
 app.get('/api/user/status/alipay', isUser, user.getAlipayStatus);
 
@@ -96,7 +103,9 @@ app.post('/api/user/order/status', isUser, user.checkOrder);
 
 app.post('/api/user/alipay/callback', user.alipayCallback);
 
-app.post('/api/push/client', push.client);
+if(config.plugins.webgui.gcmAPIKey && config.plugins.webgui.gcmSenderId) {
+  app.post('/api/push/client', push.client);
+}
 
 app.get('/serviceworker.js', (req, res) => {
   res.header('Content-Type', 'text/javascript');

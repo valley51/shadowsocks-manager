@@ -59,6 +59,7 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
             server.host = servers[index].host;
             server.name = servers[index].name;
             server.port = servers[index].port;
+            server.status = servers[index].status;
             adminApi.getServerFlow(server.id).then(flow => {
               if(!server.flow) {
                 server.flow = {};
@@ -185,7 +186,7 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
     const setChart = (lineData, pieData) => {
       $scope.pieChart = {
         data: pieData.map(m => m.flow),
-        labels: pieData.map(m => m.port + (m.username ? ` [${ m.username }]` : '')),
+        labels: pieData.map(m => m.port + (m.userName ? ` [${ m.userName }]` : '')),
         options: {
           responsive: false,
           tooltips: {
@@ -195,7 +196,10 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
               label: function(tooltipItem, data) {
                 const label = data.labels[tooltipItem.index];
                 const datasetLabel = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
-                return label + ': ' + scaleLabel(datasetLabel);
+                //return label + ': ' + scaleLabel(datasetLabel);
+                return [
+                  label, scaleLabel(datasetLabel)
+                ];
               }
             }
           },
@@ -288,8 +292,8 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
     };
   }
 ])
-.controller('AdminAddServerController', ['$scope', '$state', '$stateParams', '$http',
-  ($scope, $state, $stateParams, $http) => {
+.controller('AdminAddServerController', ['$scope', '$state', '$stateParams', '$http', 'alertDialog',
+  ($scope, $state, $stateParams, $http, alertDialog) => {
     $scope.setTitle('新增服务器');
     $scope.setMenuButton('arrow_back', 'admin.server');
     $scope.methods = [
@@ -313,14 +317,20 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
     };
     $scope.server = {};
     $scope.confirm = () => {
+      alertDialog.loading();
       $http.post('/api/admin/server', {
         name: $scope.server.name,
         address: $scope.server.address,
         port: +$scope.server.port,
         password: $scope.server.password,
         method: $scope.server.method,
+      }, {
+        timeout: 15000,
       }).then(success => {
+        alertDialog.show('添加服务器成功', '确定');
         $state.go('admin.server');
+      }).catch(() => {
+        alertDialog.show('添加服务器失败', '确定');
       });
     };
     $scope.cancel = () => {
@@ -328,9 +338,10 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
     };
   }
 ])
-.controller('AdminEditServerController', ['$scope', '$state', '$stateParams', '$http', 'confirmDialog',
-  ($scope, $state, $stateParams, $http, confirmDialog) => {
+.controller('AdminEditServerController', ['$scope', '$state', '$stateParams', '$http', 'confirmDialog', 'alertDialog',
+  ($scope, $state, $stateParams, $http, confirmDialog, alertDialog) => {
     $scope.setTitle('编辑服务器');
+    const serverId = $stateParams.serverId
     $scope.setMenuButton('arrow_back', function() {
       $state.go('admin.serverPage', { serverId: $stateParams.serverId });
     });
@@ -353,24 +364,35 @@ app.controller('AdminServerController', ['$scope', '$http', '$state', 'moment', 
     $scope.setMethod = () => {
       $scope.server.method = $scope.methodSearch;
     };
-    $http.get('/api/admin/server/' + $stateParams.serverId).then(success => {
+    $http.get(`/api/admin/server/${ serverId }`, {
+      params: {
+        noPort: true,
+      }
+    })
+    .then(success => {
       $scope.server = {
         name: success.data.name,
         address: success.data.host,
         port: +success.data.port,
         password: success.data.password,
         method: success.data.method,
+        scale: success.data.scale,
       };
     });
     $scope.confirm = () => {
+      alertDialog.loading();
       $http.put('/api/admin/server/' + $stateParams.serverId, {
         name: $scope.server.name,
         address: $scope.server.address,
         port: +$scope.server.port,
         password: $scope.server.password,
         method: $scope.server.method,
+        scale: $scope.server.scale,
       }).then(success => {
+        alertDialog.show('修改服务器成功', '确定');
         $state.go('admin.serverPage', { serverId: $stateParams.serverId });
+      }).catch(() => {
+        alertDialog.show('修改服务器失败', '确定');
       });
     };
     $scope.cancel = () => {

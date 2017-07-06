@@ -16,6 +16,12 @@ knex('webguiSetting').select().where({
     signUp: {
       isEnable: true,
     },
+    multiServerFlow: false,
+    port: {
+      start: 50000,
+      end: 60000,
+      random: false,
+    }
   };
   return knex('webguiSetting').insert({
     key: 'system',

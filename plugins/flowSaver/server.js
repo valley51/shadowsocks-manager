@@ -1,6 +1,5 @@
-'use strict';
-
 const knex = appRequire('init/knex').knex;
+const manager = appRequire('services/manager');
 
 const add = (name, host, port, password, method) => {
   return knex('server').insert({
@@ -23,18 +22,51 @@ const del = (id) => {
   });
 };
 
-const edit = (id, name, host, port, password, method) => {
+const edit = (id, name, host, port, password, method, scale = 1) => {
   return knex('server').where({ id }).update({
     name,
     host,
     port,
     password,
     method,
+    scale,
   });
 };
 
-const list = () => {
-  return knex('server').select(['id', 'name', 'host', 'port', 'password', 'method']).orderBy('name');
+const list = async (options = {}) => {
+  const serverList = await knex('server').select([
+    'id',
+    'name',
+    'host',
+    'port',
+    'password',
+    'method',
+    'scale'
+  ]).orderBy('name');
+  if(options.status) {
+    const serverStatus = [];
+    const getServerStatus = (server, index) => {
+      return manager.send({
+        command: 'list',
+      }, {
+        host: server.host,
+        port: server.port,
+        password: server.password,
+      }).then(success => {
+        return { status: 0, index };
+      }).catch(error => {
+        return { status: -1, index };
+      });
+    };
+    serverList.forEach((server, index) => {
+      serverStatus.push(getServerStatus(server, index));
+    });
+    const status = await Promise.all(serverStatus);
+    status.forEach(f => {
+      serverList[f.index].status = f.status;
+    });
+  }
+  return serverList;
 };
 
 exports.add = add;
